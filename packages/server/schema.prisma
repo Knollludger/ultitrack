@@ -1,0 +1,142 @@
+model Player {
+  id          Int         @id @default(autoincrement())
+  firstName   String
+  lastName    String
+  nickname    String?
+  position    String
+  gender      String?     // New field for gender
+  playerTeams PlayerTeam[]
+  passes      Pass[]      // Passes thrown by this player
+  pointPlayers PointPlayer[] // New relation for points played
+}
+
+model Team {
+  id         Int         @id @default(autoincrement())
+  name       String      // Changed from teamName to name
+  coach      String
+  division   String
+  playerTeams PlayerTeam[]
+  games      Game[]
+}
+
+model PlayerTeam {
+  id          Int     @id @default(autoincrement())
+  player      Player  @relation(fields: [playerId], references: [id])
+  playerId    Int
+  team        Team    @relation(fields: [teamId], references: [id])
+  teamId      Int
+  jerseyNumber Int     // Moved here
+
+  @@unique([playerId, teamId])  // Prevent duplicate entries
+}
+
+model Game {
+  id            Int         @id @default(autoincrement())
+  date          DateTime
+  time          DateTime
+  location      String
+  team1        Team        @relation("Team1Games", fields: [team1Id], references: [id])
+  team1Id      Int
+  team2        Team        @relation("Team2Games", fields: [team2Id], references: [id])
+  team2Id      Int
+  scoreTeam1   Int
+  scoreTeam2   Int
+  points       Point[]
+}
+
+model Point {
+  id               Int              @id @default(autoincrement())
+  game             Game             @relation(fields: [gameId], references: [id])
+  gameId           Int
+  pointNumber      Int
+  scoringTeam      Team             @relation(fields: [scoringTeamId], references: [id])
+  scoringTeamId    Int
+  isHalfPointEnd   Boolean          // Renamed field to indicate if the point is at half
+  pointStartTime   DateTime
+  pointEndTime     DateTime
+  startedOnOffense Team             @relation(fields: [startedOnOffenseId], references: [id]) // Changed to reference Team
+  startedOnOffenseId Int?            // Foreign key to Team (nullable)
+  possessions      Possession[]
+  pointPlayers     PointPlayer[]    // New relation for players in the point
+}
+
+model PointPlayer {
+  id          Int       @id @default(autoincrement())
+  player      Player    @relation(fields: [playerId], references: [id]) // Reference to Player
+  playerId    Int
+  team        Team      @relation(fields: [teamId], references: [id]) // Reference to Team
+  teamId      Int
+  position    Position  @relation(fields: [positionId], references: [id]) // Reference to Position
+  positionId  Int?      // Foreign key to Position (nullable)
+}
+
+model Position {
+  id          Int       @id @default(autoincrement())
+  name        String    // e.g., Handler, Cutter, etc.
+  pointPlayers PointPlayer[] // Relation back to PointPlayer
+}
+
+model Possession {
+  id              Int       @id @default(autoincrement())
+  point           Point     @relation(fields: [pointId], references: [id]) // Reference to Point
+  pointId         Int
+  team            Team      @relation(fields: [teamId], references: [id]) // Reference to Team
+  teamId          Int
+  startTime       DateTime
+  endTime         DateTime
+  startLocationX  Float     // New field for starting X location
+  startLocationY  Float     // New field for starting Y location
+  passes          Pass[]
+  blocks          Block[]   // New relation for blocks associated with the possession
+}
+
+model Pass {
+  id                  Int           @id @default(autoincrement())
+  possession         Possession    @relation(fields: [possessionId], references: [id]) // Reference to Possession
+  possessionId       Int
+  passer              Player        @relation("Passer", fields: [passerId], references: [id]) // Reference to Player (passer)
+  passerId           Int
+  receiver            Player        @relation("Receiver", fields: [receiverId], references: [id]) // Reference to Player (receiver)
+  receiverId         Int
+  result              ThrowResult   @relation(fields: [resultId], references: [id]) // Reference to ThrowResult
+  resultId            Int            // Foreign key to ThrowResult
+  type                ThrowType     @relation(fields: [typeId], references: [id]) // Foreign key to ThrowType
+  typeId             Int            // New foreign key field
+  priorThrow         Pass?         @relation("PriorThrow", fields: [priorThrowId], references: [id]) // Nullable field for prior throw
+  priorThrowId       Int?          // Nullable foreign key to Pass
+  passerLocationX     Float
+  passerLocationY     Float
+  receiverLocationX   Float
+  receiverLocationY   Float
+  throwStartTime      DateTime
+  throwEndTime        DateTime
+  receiverDefender   Player?       @relation("ReceiverDefender", fields: [receiverDefenderId], references: [id]) // New optional field for receiver defender
+  receiverDefenderId Int?          // Nullable foreign key for receiver defender
+  passerDefender     Player?       @relation("PasserDefender", fields: [passerDefenderId], references: [id]) // New optional field for passer defender
+  passerDefenderId   Int?          // Nullable foreign key for passer defender
+}
+
+model Block {
+  id              Int         @id @default(autoincrement())
+  possession      Possession  @relation(fields: [possessionId], references: [id]) // Reference to Possession
+  possessionId    Int
+  pass            Pass?       @relation(fields: [passId], references: [id]) // Optional reference to Pass
+  passId          Int?        // Nullable foreign key to Pass
+  blocker         Player       @relation(fields: [blockerId], references: [id]) // Reference to Player (blocker)
+  blockerId       Int
+  time            DateTime     // Timestamp of when the block occurred
+  locationX       Float        // New field for block's X location
+  locationY       Float        // New field for block's Y location
+}
+
+model ThrowResult {
+  id          Int      @id @default(autoincrement())
+  name        String   // e.g., Successful, Turnover, Goal, Drop
+  passes      Pass[]
+}
+
+model ThrowType {
+  id          Int      @id @default(autoincrement())
+  name        String   // e.g., Forehand, Backhand, Hammer
+  passes      Pass[]
+}
